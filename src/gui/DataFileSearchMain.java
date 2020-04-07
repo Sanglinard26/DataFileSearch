@@ -9,7 +9,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  * Creation : 17 févr. 2018
  */
 
-public final class MDFSearchMain {
+public final class DataFileSearchMain {
 
     public static void main(String[] args) {
 

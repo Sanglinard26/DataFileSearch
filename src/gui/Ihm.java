@@ -53,14 +53,14 @@ public final class Ihm extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    private static final String INFO = "<html><b>INFO : Outil pour rechercher des acquisitions contenant certaines variables</b><br>"
+    private static final String INFO = "<html><b>INFO : Outil pour rechercher des fichiers de donn&eacute;es contenant certaines variables</b><br>"
             + "<br><u>Procedure :</u></br>" + "<ul><li>Selection le dossier contenant les acquisitions"
-            + "<li>Renseigner les variables (en respectant la casse) a rechercher en les separant par un point virgule ou glisser directement un fichier lab"
+            + "<li>Renseigner les variables (en respectant la casse, ex : \"Ext_nEng\") a rechercher en les separant par un point virgule ou glisser directement un fichier lab"
             + "<li>Lancer la recherche, les resultats apparaitront dans le tableau ci-dessous</ul>" + "</html>";
 
     private static Path pathFolder;
     private static List<String> signalToSearch;
-    private static final String[] COLUMN = { "Acquisition(s)" };
+    private static final String[] COLUMN = { "Fichier(s)" };
     private static int nbMdf = 0;
 
     final JTextField field;
@@ -71,7 +71,7 @@ public final class Ihm extends JFrame {
     private static final GridBagConstraints gbc = new GridBagConstraints();
 
     public Ihm() {
-        super("MDFSearch");
+        super("DataFileSearch");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         final Container root = getContentPane();
@@ -89,7 +89,7 @@ public final class Ihm extends JFrame {
         gbc.anchor = GridBagConstraints.FIRST_LINE_START;
         root.add(new JLabel(INFO), gbc);
 
-        final JButton btFolder = new JButton("Selectionner repertoire");
+        final JButton btFolder = new JButton("S\u00e9lectionner r\u00e9pertoire");
         btFolder.addActionListener(new ActionListener() {
 
             @Override
@@ -102,7 +102,7 @@ public final class Ihm extends JFrame {
                 if (reponse == JFileChooser.APPROVE_OPTION) {
                     pathFolder = fc.getSelectedFile().toPath();
                     selectedFolder.setText("Dossier choisi : " + pathFolder);
-                    nbResult.setText("Nombre de resultat :");
+                    nbResult.setText("Nombre de r\u00e9sultat :");
                     model.setRowCount(0);
                 }
             }
@@ -139,9 +139,10 @@ public final class Ihm extends JFrame {
         gbc.weighty = 0;
         gbc.insets = new Insets(5, 5, 0, 0);
         gbc.anchor = GridBagConstraints.CENTER;
-        root.add(new JLabel("Variable(s) a rechercher :"), gbc);
+        root.add(new JLabel("Variable(s) \u00e0 rechercher :"), gbc);
 
         field = new JTextField(60);
+        field.setToolTipText("Ex : Ext_nEng;AccP_rAccp;Veh_spdVeh");
         field.setTransferHandler(new TransfertLab());
 
         gbc.fill = GridBagConstraints.NONE;
@@ -162,7 +163,7 @@ public final class Ihm extends JFrame {
             public void actionPerformed(ActionEvent e) {
 
                 model.setRowCount(0);
-                nbResult.setText("Nombre de resultat :");
+                nbResult.setText("Nombre de r\u00e9sultat :");
                 final String filterName = field.getText();
 
                 if (filterName.length() > 0) {
@@ -209,7 +210,7 @@ public final class Ihm extends JFrame {
                             final Cursor oldCursor = Cursor.getDefaultCursor();
                             setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
                             searchSignalName();
-                            nbResult.setText("Nombre de resultat : " + model.getRowCount() + "/" + nbMdf);
+                            nbResult.setText("Nombre de r\u00e9sultat : " + model.getRowCount() + "/" + nbMdf);
                             setCursor(oldCursor);
                         }
                     }).start();
@@ -228,7 +229,7 @@ public final class Ihm extends JFrame {
         gbc.anchor = GridBagConstraints.FIRST_LINE_START;
         root.add(btCheckSignal, gbc);
 
-        nbResult = new JLabel("Nombre de resultat :");
+        nbResult = new JLabel("Nombre de r\u00e9sultat :");
         gbc.fill = GridBagConstraints.BOTH;
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -283,7 +284,7 @@ public final class Ihm extends JFrame {
             }
         });
 
-        final JButton btSave = new JButton("Enregistrer resultats");
+        final JButton btSave = new JButton("Enregistrer r\u00e9sultats");
         gbc.fill = GridBagConstraints.NONE;
         gbc.gridx = 0;
         gbc.gridy = 7;
@@ -302,7 +303,7 @@ public final class Ihm extends JFrame {
 
                 if (model.getRowCount() > 0) {
                     final JFileChooser fileChooser = new JFileChooser();
-                    fileChooser.setDialogTitle("Enregistement des resultats");
+                    fileChooser.setDialogTitle("Enregistement des r\u00e9sultats");
                     fileChooser.setFileFilter(new FileFilter() {
 
                         @Override
@@ -451,5 +452,4 @@ public final class Ihm extends JFrame {
             return true;
         }
     }
-
 }
