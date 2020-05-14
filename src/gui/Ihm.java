@@ -19,10 +19,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +32,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +49,7 @@ import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableModel;
 
+import aif.Aif;
 import de.rechner.openatfx_mdf.mdf3.Mdf3Util;
 import utils.Utilitaire;
 
@@ -54,14 +58,14 @@ public final class Ihm extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private static final String INFO = "<html><b>INFO : Outil pour rechercher des fichiers de donn&eacute;es contenant certaines variables</b><br>"
-            + "<br><u>Procedure :</u></br>" + "<ul><li>Selection le dossier contenant les acquisitions"
-            + "<li>Renseigner les variables (en respectant la casse, ex : \"Ext_nEng\") a rechercher en les separant par un point virgule ou glisser directement un fichier lab"
-            + "<li>Lancer la recherche, les resultats apparaitront dans le tableau ci-dessous</ul>" + "</html>";
+            + "<br><u>Proc&eacute;dure :</u></br>" + "<ul><li>S&eacute;lectionner le dossier contenant les acquisitions (fichiers dat ou aif)"
+            + "<li>Renseigner les variables (en respectant la casse, ex : \"Ext_nEng\", \"TECSMOT1\"...) &agrave; rechercher en les s&eacute;parant par un point virgule ou glisser directement un fichier lab"
+            + "<li>Lancer la recherche, les r&eacute;sultats apparaitront dans le tableau ci-dessous</ul>" + "</html>";
 
     private static Path pathFolder;
     private static List<String> signalToSearch;
     private static final String[] COLUMN = { "Fichier(s)" };
-    private static int nbMdf = 0;
+    private static int nbFileFounded = 0;
 
     final JTextField field;
     final JLabel selectedFolder;
@@ -170,31 +174,9 @@ public final class Ihm extends JFrame {
 
                     signalToSearch = new ArrayList<String>();
 
-                    File fLab = new File(filterName);
-                    if (fLab.exists()) {
-                        BufferedReader buf = null;
-                        try {
-                            buf = new BufferedReader(new FileReader(fLab));
-                            String line;
-
-                            while ((line = buf.readLine()) != null) {
-                                if (!line.equals("[RAMCELL]")) {
-                                    signalToSearch.add(line.trim());
-                                }
-                            }
-
-                        } catch (IOException ioe) {
-                            System.err.println(ioe.getMessage());
-                        } finally {
-                            if (buf != null) {
-                                try {
-                                    buf.close();
-                                } catch (IOException e1) {
-                                    e1.printStackTrace();
-                                }
-                            }
-                        }
-
+                    File fileFilter = new File(filterName);
+                    if (fileFilter.exists()) {
+                        parseFileFilter(fileFilter);
                     } else {
                         for (String s : filterName.split(";")) {
                             if (s.trim().length() > 0) {
@@ -210,7 +192,7 @@ public final class Ihm extends JFrame {
                             final Cursor oldCursor = Cursor.getDefaultCursor();
                             setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
                             searchSignalName();
-                            nbResult.setText("Nombre de r\u00e9sultat : " + model.getRowCount() + "/" + nbMdf);
+                            nbResult.setText("Nombre de r\u00e9sultat : " + model.getRowCount() + "/" + nbFileFounded);
                             setCursor(oldCursor);
                         }
                     }).start();
@@ -368,6 +350,48 @@ public final class Ihm extends JFrame {
         setMinimumSize(new Dimension(getWidth(), getHeight()));
     }
 
+    private final void parseFileFilter(File file) {
+
+        try (BufferedReader buf = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("ISO-8859-1")))) {
+            String line;
+
+            String extension = Utilitaire.getExtension(file);
+
+            switch (extension) {
+            case "lab":
+                while ((line = buf.readLine()) != null) {
+                    if (!line.equals("[RAMCELL]")) {
+                        signalToSearch.add(line.trim());
+                    }
+                }
+                break;
+            case "cec":
+
+                boolean pass = false;
+
+                while ((line = buf.readLine()) != null) {
+
+                    if (!pass && line.startsWith("[Mesures=")) {
+                        pass = true;
+                        line = buf.readLine();
+                    }
+
+                    if (pass) {
+                        signalToSearch.add(line.trim());
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+
+        } catch (
+
+        IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private static void searchSignalName() {
         if (pathFolder != null) {
             try {
@@ -395,22 +419,33 @@ public final class Ihm extends JFrame {
         final List<String> listMdfFileName = new ArrayList<String>();
 
         public Finder() {
-            nbMdf = 0;
+            nbFileFounded = 0;
         }
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            if (Utilitaire.getExtension(file.toFile()).equals("dat")) {
 
+            String extension = Utilitaire.getExtension(file.toFile());
+
+            switch (extension) {
+            case "dat":
                 listSignalName = Mdf3Util.getListSignalName(file);
-
-                if (!listSignalName.isEmpty()) {
-                    if (listSignalName.containsAll(signalToSearch)) {
-                        listMdfFileName.add(file.toString());
-                    }
-                    nbMdf++;
-                }
+                break;
+            case "aif":
+                listSignalName = Aif.getDatasetList(file.toFile());
+                break;
+            default:
+                listSignalName = Collections.emptySet();
+                break;
             }
+
+            if (!listSignalName.isEmpty()) {
+                if (listSignalName.containsAll(signalToSearch)) {
+                    listMdfFileName.add(file.toString());
+                }
+                nbFileFounded++;
+            }
+
             return FileVisitResult.CONTINUE;
         }
     }
